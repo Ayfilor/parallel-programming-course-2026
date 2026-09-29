@@ -1,0 +1,6 @@
+#include "single_threaded.cpp"
+#include "global_lock.cpp"
+#include "stub_lock.cpp"
+#include "striped_lock.cpp"
+#include "thread_local.cpp"
+#include "double_buffer.cpp"
