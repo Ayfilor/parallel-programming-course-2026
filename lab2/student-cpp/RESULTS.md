@@ -25,3 +25,14 @@ stress V2, window=none: 10000 runs, 0 overdrafts (0.00%)
 Answer: Планировщик ОС недетерминирован, поэтому v1 делает yield непредсказуемо, что влечёт разные результаты. 0 овердрафтов v1 говорило бы, что система зачастую корректна, однако для подтверждения полной корректности нужен не стресс тест, а что-то покрывающее все codepaths. 
 
 
+## Stage 1
+The `o/lab2 withdraw-v0 first log` output:
+```
+  A  balance -> 100
+  A  window
+  A  balance -> 100
+  A  balance = 0
+  B  balance -> 0
+  B  window
+schedule AAAB -> ok
+```

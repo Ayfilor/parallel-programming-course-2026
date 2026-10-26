@@ -17,9 +17,18 @@ public:
     shared& operator=(const shared&) = delete;
 
     // Чтение с паузой перед ним.
-    T get() { throw std::logic_error("TODO этап 1: shared::get"); }
+    T get() {
+        Scheduler::pause();
+        T result = v_;
+        log_operation(name_ + " -> " + std::to_string(result));
+        return result;
+    }
     // Запись с паузой перед ней.
-    void set(T) { throw std::logic_error("TODO этап 1: shared::set"); }
+    void set(T value) {
+        Scheduler::pause();
+        v_ = value;
+        log_operation(name_ + " = " + std::to_string(value));
+    }
     // То же, что get(): планировщик не моделирует порядки памяти.
     T get_acquire() { return get(); }
     // То же, что set(x).

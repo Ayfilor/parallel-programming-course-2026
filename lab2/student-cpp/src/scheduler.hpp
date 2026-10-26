@@ -3,6 +3,8 @@
 // Этап 2: обнаружение deadlock в главном цикле и корректное завершение застрявших потоков.
 // Внутреннее устройство (поля, семафоры, вспомогательные функции для shared и sched_mutex) придумываете сами.
 #include <functional>
+#include <memory>
+#include <semaphore>
 #include <string>
 #include <vector>
 
@@ -20,6 +22,8 @@ public:
     void run(Strategy& strategy);
     // Трасса прогона: буквы потоков, выбранных во всех решениях подряд, например "AAAABB".
     std::string trace_string() const;
+    static void pause();
+    void yield(int thread_id);
 
     // Если true, каждая операция с общими данными добавляет строку в log. Выставляет runner.
     bool logging = false;
@@ -27,11 +31,20 @@ public:
     std::vector<std::string> log;
     // Пустая строка, если deadlock не было; иначе "held={a:A, b:B}" (этап 2).
     std::string deadlock;
+
+private:
+    struct Worker;
+    static void run_worker(Scheduler* scheduler, int thread_id);
+    std::vector<std::unique_ptr<Worker>> threads_;
+    std::string trace_;
+    std::binary_semaphore semaphore_{0};
 };
 
 // window() из тестовых программ: пауза перед следующей операцией с общими данными обязательна.
 void point();
 // Ждать, пока cond не станет true. До этого поток не попадает в enabled.
 void await(std::function<bool()> cond);
+// Internal operation logger used by Shared.
+void log_operation(const std::string& operation);
 
 }  // namespace sched
