@@ -79,3 +79,31 @@ schedule AABBBBAA -> OVERDRAFT balance=-100 results=true,true
 ```
 
 Answer: ну с логом есть отладочная информация (~_-)
+
+
+## Stage 4
+
+The `o/lab2 withdraw-v1 dfs` output:
+```
+explored 10 schedules, 6 fail  (0.00 s)
+first failing: AABBAABB -> OVERDRAFT balance=-100 results=true,true
+```
+
+The `o/lab2 withdraw-v2 dfs` output:
+```
+explored 2 schedules, 0 fail  (0.00 s)
+```
+
+The `o/lab2 withdraw-v0 dfs` output:
+```
+explored 20 schedules, 18 fail  (0.00 s)
+first failing: AABABB -> OVERDRAFT balance=-100 results=true,true
+```
+
+The `o/lab2 transfer dfs` output:
+```
+explored 6 schedules, 2 fail  (0.00 s)
+first failing: AB -> DEADLOCK held={a:A, b:B}
+```
+
+Answer: ну в v2 один лок, а в v1 два – меньше простор действий

@@ -4,7 +4,6 @@
 // enabled — номера потоков, которые могут сделать шаг, по возрастанию; last — прошлый выбранный (-1 в начале).
 #include <cstdint>
 #include <random>
-#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -47,10 +46,29 @@ private:
 struct Dfs : Strategy {
     explicit Dfs(int) {}
     // Подготовиться к новому прогону (позиция в пути, счётчик вытеснений).
-    void begin_run() override {}
-    int pick(const std::vector<int>&, int) override { throw std::logic_error("TODO этап 4: Dfs::pick"); }
+    void begin_run() override { idx_ = 0; }
+    int pick(const std::vector<int>& enabled, int) override {
+        if (idx_ == nodes_stack.size()) nodes_stack.push_back({enabled, 0});
+        auto& node = nodes_stack[idx_++];
+        return node.options[node.picked];
+    }
     // Выбрать следующий путь; false — дерево обойдено.
-    bool end_run() override { throw std::logic_error("TODO этап 4: Dfs::end_run"); }
+    bool end_run() override {
+        while (!nodes_stack.empty()) {
+            auto& node = nodes_stack.back();
+            if (++node.picked < node.options.size()) return true;
+            nodes_stack.pop_back();
+        }
+        return false;
+    }
+
+private:
+    struct Node {
+        std::vector<int> options;
+        size_t picked;
+    };
+    std::vector<Node> nodes_stack;
+    size_t idx_ = 0;
 };
 
 }  // namespace sched
