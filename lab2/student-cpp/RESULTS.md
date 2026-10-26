@@ -36,3 +36,19 @@ The `o/lab2 withdraw-v0 first log` output:
   B  window
 schedule AAAB -> ok
 ```
+
+
+## Stage 2
+The `o/lab2 transfer first` output:
+```
+schedule AAAABBBB -> ok
+```
+
+The `o/lab2 transfer replay AB log` output:
+```
+  A  lock a
+  A  window
+  B  lock b
+  B  window
+schedule AB -> DEADLOCK held={a:A, b:B}
+```

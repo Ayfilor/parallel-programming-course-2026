@@ -2,6 +2,7 @@
 // Сейчас все методы бросают исключение «TODO»: заполните их по заданию этапов 1 и 2.
 // Деструктор должен дождаться (join) всех запущенных потоков, в том числе после deadlock.
 #include "scheduler.hpp"
+#include "sched_mutex.hpp"
 
 #include <algorithm>
 #include <cassert>
@@ -20,6 +21,8 @@ struct Scheduler::Worker {
     bool done = false;
 };
 
+struct RunAborted {};
+
 Scheduler::Scheduler() = default;
 
 struct TlsState {
@@ -35,12 +38,14 @@ Scheduler::~Scheduler() {
 
 void Scheduler::spawn(std::function<void()> body) {
     threads_.push_back(std::make_unique<Worker>(static_cast<int>(threads_.size()), std::move(body)));
+    waiting_mutexes_.push_back(nullptr);
 }
 
 void Scheduler::run_worker(Scheduler* scheduler, int thread_id) {
     auto& worker = *scheduler->threads_[thread_id];
     tls_state = {scheduler, thread_id, true};
-    worker.body();
+    try { worker.body(); }
+    catch (const RunAborted&) { worker.done = true; return; }
     worker.done = true;
     scheduler->semaphore_.release();
 }
@@ -57,8 +62,17 @@ void Scheduler::run(Strategy& strategy) {
     while (true) {
         std::vector<int> enabled;
         for (size_t i = 0; i < threads_.size(); ++i)
-            if (!threads_[i]->done) enabled.push_back(static_cast<int>(i));
-        if (enabled.empty()) break;
+            if (!threads_[i]->done &&
+                (!waiting_mutexes_[i] || waiting_mutexes_[i]->owner < 0))
+                enabled.push_back(static_cast<int>(i));
+        if (enabled.empty()) {
+            bool all_done = true;
+            for (const auto& worker : threads_) all_done &= worker->done;
+            if (all_done) break;
+            deadlock = make_held_string();
+            abort_workers();
+            return;
+        }
 
         const int picked = strategy.pick(enabled, last);
         assert(std::find(enabled.begin(), enabled.end(), picked) != enabled.end()); // valid thread_id
@@ -80,9 +94,33 @@ void Scheduler::pause() {
     tls.scheduler->yield(tls.thread_id);
 }
 
+int Scheduler::current_thread_id() { return tls_state.thread_id; }
+
 void Scheduler::yield(int thread_id) {
     semaphore_.release();
     threads_[thread_id]->semaphore.acquire();
+    if (aborted_) throw RunAborted{};
+}
+
+void Scheduler::register_mutex(sched_mutex* mutex) {
+    mutexes_.push_back(mutex);
+}
+
+std::string Scheduler::make_held_string() const {
+    std::string held = "held={";
+    bool first = true;
+    for (const auto* mutex : mutexes_) if (mutex->owner >= 0) {
+        if (!first) held += ", ";
+        first = false;
+        held += mutex->name + ":" + char('A' + mutex->owner);
+    }
+    return held + "}";
+}
+
+void Scheduler::abort_workers() {
+    aborted_ = true;
+    for (auto& worker : threads_) if (!worker->done) worker->semaphore.release();
+    for (auto& worker : threads_) if (worker->thread.joinable()) worker->thread.join();
 }
 
 void point() {
@@ -92,7 +130,7 @@ void point() {
 }
 
 void await(std::function<bool()> cond) {
-    if (!cond()) throw std::logic_error("await is not implemented before stage 6");
+    assert(cond());
     point();
 }
 

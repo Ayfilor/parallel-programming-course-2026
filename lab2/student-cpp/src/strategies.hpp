@@ -21,10 +21,14 @@ struct FirstAlive : Strategy {
 
 // Проигрывает трассу: на i-м решении выбирает поток trace[i] ('A' -> 0, 'B' -> 1).
 struct Replay : Strategy {
-    explicit Replay(std::string) {}
+    explicit Replay(std::string trace) : trace_(std::move(trace)) {}
     // Сбросить позицию в трассе перед прогоном.
-    void begin_run() override {}
-    int pick(const std::vector<int>&, int) override { throw std::logic_error("TODO этап 2: Replay::pick"); }
+    void begin_run() override { idx_ = 0; }
+    int pick(const std::vector<int>&, int) override { return trace_[idx_++] - 'A'; }
+
+private:
+    std::string trace_;
+    size_t idx_ = 0;
 };
 
 // Случайный поток: enabled[rnd() % enabled.size()], rnd — std::mt19937(seed).
