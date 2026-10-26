@@ -52,3 +52,30 @@ The `o/lab2 transfer replay AB log` output:
   B  window
 schedule AB -> DEADLOCK held={a:A, b:B}
 ```
+
+
+## Stage 3
+
+The `o/lab2 withdraw-v1 randoms 1000` output:
+```
+random: 1000 seeds, 498 fail (49.8%)
+first failing seed 0: AABBBBAA -> OVERDRAFT balance=-100 results=true,true
+replay AABBBBAA: same failure 10/10
+```
+
+The `o/lab2 withdraw-v1 replay AABBBBAAA log` output:
+```
+  A  lock mu
+  A  unlock mu
+  A  window
+  B  lock mu
+  B  unlock mu
+  B  window
+  B  lock mu
+  B  unlock mu
+  A  lock mu
+  A  unlock mu
+schedule AABBBBAA -> OVERDRAFT balance=-100 results=true,true
+```
+
+Answer: ну с логом есть отладочная информация (~_-)
