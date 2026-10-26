@@ -2,9 +2,11 @@
 // Стратегии выбора следующего потока.
 // FirstAlive — этап 1, Replay — этап 2, RandomPick — этап 3, Dfs — этап 4 (ограничение bound — этап 5).
 // enabled — номера потоков, которые могут сделать шаг, по возрастанию; last — прошлый выбранный (-1 в начале).
+#include <algorithm>
 #include <cstdint>
 #include <random>
 #include <string>
+#include <utility>
 #include <vector>
 
 #include "strategy.hpp"
@@ -44,13 +46,26 @@ private:
 // Stateless DFS по дереву выборов: каждый прогон с нуля, повторяет префикс прошлого и берёт следующий вариант.
 // bound — максимум вытеснений (этап 5); для dfs runner передаёт INT_MAX.
 struct Dfs : Strategy {
-    explicit Dfs(int) {}
+    explicit Dfs(int bound) : bound_(bound) {}
     // Подготовиться к новому прогону (позиция в пути, счётчик вытеснений).
-    void begin_run() override { idx_ = 0; }
-    int pick(const std::vector<int>& enabled, int) override {
-        if (idx_ == nodes_stack.size()) nodes_stack.push_back({enabled, 0});
+    void begin_run() override { idx_ = 0; preemptions_ = 0; }
+    int pick(const std::vector<int>& enabled, int last) override {
+        const bool last_enabled = last >= 0 &&
+            std::find(enabled.begin(), enabled.end(), last) != enabled.end();
+
+        if (idx_ == nodes_stack.size()) {
+            nodes_stack.push_back({});
+            auto& node = nodes_stack.back();
+            for (int thread_id : enabled)
+                if (!last_enabled || thread_id == last || preemptions_ < bound_)
+                    node.options.push_back(thread_id);
+        }
+
         auto& node = nodes_stack[idx_++];
-        return node.options[node.picked];
+        const int picked = node.options[node.picked];
+        if (last_enabled && picked != last)
+            ++preemptions_;
+        return picked;
     }
     // Выбрать следующий путь; false — дерево обойдено.
     bool end_run() override {
@@ -65,10 +80,12 @@ struct Dfs : Strategy {
 private:
     struct Node {
         std::vector<int> options;
-        size_t picked;
+        size_t picked = 0;
     };
     std::vector<Node> nodes_stack;
     size_t idx_ = 0;
+    int bound_;
+    int preemptions_ = 0;
 };
 
 }  // namespace sched

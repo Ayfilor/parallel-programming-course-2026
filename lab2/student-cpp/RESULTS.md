@@ -107,3 +107,60 @@ first failing: AB -> DEADLOCK held={a:A, b:B}
 ```
 
 Answer: ну в v2 один лок, а в v1 два – меньше простор действий
+
+
+## Stage 5
+
+The `o/lab2 withdraw-v1 bounded 0` output:
+```
+explored 2 schedules, 0 fail  (0.00 s)
+```
+
+The `o/lab2 withdraw-v1 bounded 1` output:
+```
+explored 6 schedules, 2 fail  (0.00 s)
+first failing: AABBBBAA -> OVERDRAFT balance=-100 results=true,true
+```
+
+The `o/lab2 withdraw-v1 bounded 2` output:
+```
+explored 10 schedules, 6 fail  (0.00 s)
+first failing: AABBAABB -> OVERDRAFT balance=-100 results=true,true
+```
+
+The `o/lab2 transfer bounded 0` output:
+```
+explored 2 schedules, 0 fail  (0.00 s)
+```
+
+The `o/lab2 transfer bounded 1` output:
+```
+explored 6 schedules, 2 fail  (0.00 s)
+first failing: AB -> DEADLOCK held={a:A, b:B}
+```
+
+Task 2:
+
+The `o/lab2 withdraw-v1 replay AABBBBAA log` output:
+```
+  A  lock mu
+  A  unlock mu
+  A  window
+  B  lock mu
+  B  unlock mu
+  B  window
+  B  lock mu
+  B  unlock mu
+  A  lock mu
+  A  unlock mu
+schedule AABBBBAA -> OVERDRAFT balance=-100 results=true,true
+```
+
+The `o/lab2 transfer replay AB log` output:
+```
+  A  lock a
+  A  window
+  B  lock b
+  B  window
+schedule AB -> DEADLOCK held={a:A, b:B}
+```
