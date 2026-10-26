@@ -39,6 +39,7 @@ Scheduler::~Scheduler() {
 void Scheduler::spawn(std::function<void()> body) {
     threads_.push_back(std::make_unique<Worker>(static_cast<int>(threads_.size()), std::move(body)));
     waiting_mutexes_.push_back(nullptr);
+    waiting_conditions_.push_back({});
 }
 
 void Scheduler::run_worker(Scheduler* scheduler, int thread_id) {
@@ -63,6 +64,7 @@ void Scheduler::run(Strategy& strategy) {
         std::vector<int> enabled;
         for (size_t i = 0; i < threads_.size(); ++i)
             if (!threads_[i]->done &&
+                (!waiting_conditions_[i] || waiting_conditions_[i]()) &&
                 (!waiting_mutexes_[i] || waiting_mutexes_[i]->owner < 0))
                 enabled.push_back(static_cast<int>(i));
         if (enabled.empty()) {
@@ -78,6 +80,7 @@ void Scheduler::run(Strategy& strategy) {
         assert(std::find(enabled.begin(), enabled.end(), picked) != enabled.end()); // valid thread_id
         trace_ += 'A' + picked;
         last = picked;
+        waiting_conditions_[picked] = {};
         auto& worker = *threads_[static_cast<size_t>(picked)];
         worker.semaphore.release();
         semaphore_.acquire();
@@ -130,8 +133,19 @@ void point() {
 }
 
 void await(std::function<bool()> cond) {
-    assert(cond());
-    point();
+    if (!tls_state.scheduler) {
+        assert(cond());
+        return;
+    }
+    auto* scheduler = tls_state.scheduler;
+    const int id = tls_state.thread_id;
+    if (tls_state.pause_before_next_shared_access && cond()) Scheduler::pause();
+    while (!cond()) {
+        tls_state.pause_before_next_shared_access = false;
+        scheduler->waiting_conditions_[id] = cond;
+        scheduler->yield(id);
+    }
+    log_operation("await done");
 }
 
 void log_operation(const std::string& operation) {

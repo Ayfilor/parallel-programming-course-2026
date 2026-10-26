@@ -164,3 +164,58 @@ The `o/lab2 transfer replay AB log` output:
   B  window
 schedule AB -> DEADLOCK held={a:A, b:B}
 ```
+
+
+## Stage 6
+
+```
+# 6a
+$ o/lab2 collector-nostep3-1x1 dfs
+explored 112 schedules, 12 fail  (0.01 s)
+first failing: ABBBAABAAB -> LOST 1 record(s): counted 0 of 1
+$ o/lab2 collector-nostep3-1x1 replay ABBBAABAAB log
+  A  active -> 0
+  B  active -> 0
+  B  active = 1
+  B  await done
+  A  inside[W1] = 0
+  A  cnt[W1][0] -> 0
+  B  cnt[W1][0] -> 0
+  A  cnt[W1][0] = 1
+  A  inside[W1] = -1
+  B  cnt[W1][0] = 0
+schedule ABBBAABAAB -> LOST 1 record(s): counted 0 of 1
+```
+
+```
+$ o/lab2 collector-nostep3-1x2 dfs
+explored 2023 schedules, 105 fail  (0.12 s)
+first failing: AAAAAABBBAABAAB -> LOST 1 record(s): counted 1 of 2
+
+$ o/lab2 collector-nostep3-1x3 dfs
+explored 12859 schedules, 348 fail  (0.68 s)
+first failing: AAAAAAAAAAABBBAABAAB -> LOST 1 record(s): counted 2 of 3
+
+$ o/lab2 collector-nostep3-1x4 dfs
+explored 50120 schedules, 816 fail  (2.70 s)
+first failing: AAAAAAAAAAAAAAAABBBAABAAB -> LOST 1 record(s): counted 3 of 4
+```
+
+
+```
+$ o/lab2 collector-plain-1x1 dfs
+explored 29 schedules, 0 fail  (0.00 s)
+$ o/lab2 collector-acqrel-1x1 dfs
+explored 972 schedules, 0 fail  (0.07 s)
+$ o/lab2 collector-ok-1x1 dfs
+explored 972 schedules, 0 fail  (0.07 s)
+```
+
+Почему одного писателя с одним вызовом record() оказалось достаточно, чтобы найти баг в алгоритме?
+- Потому что мы пропускаем шаг 3 очевидно – читать не выхода писателя из буфера, писатель не проверяет активность буффера
+
+Почему collector-plain-1x1 даёт 0 ошибок при наличии бага в коде?
+- Мы не трекаем inside, поэтому не позволяем читателям собирать метрики со старой корзины
+
+В чём разница между нулём ошибок у collector-acqrel-1x1 и нулём ошибок у collector-ok-1x1?
+- На самом деле acqrel model не исполняется, так как get и set ведут себя как seqence  

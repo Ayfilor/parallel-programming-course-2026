@@ -37,6 +37,7 @@ public:
     std::string deadlock;
     bool aborted_ = false;
     std::vector<sched_mutex*> waiting_mutexes_;
+    std::vector<std::function<bool()>> waiting_conditions_;
 
 private:
     struct Worker;
