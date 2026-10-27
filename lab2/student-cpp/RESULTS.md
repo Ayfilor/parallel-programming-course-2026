@@ -219,3 +219,33 @@ explored 972 schedules, 0 fail  (0.07 s)
 
 В чём разница между нулём ошибок у collector-acqrel-1x1 и нулём ошибок у collector-ok-1x1?
 - На самом деле acqrel model не исполняется, так как get и set ведут себя как seqence  
+
+
+## Stage 7
+
+- Relaxed  — yes
+- Plain    — yes
+- Aqcrel   — yes
+- Seq      — no
+- volatile — no
+- naive    — yes, 3/3
+
+```
+$ o/ministress acqrel 200000 100
+mode=acqrel samples=20000000
+  (0,0)       19536494   97.682%  forbidden under seq_cst
+  (0,1)         381376    1.907%
+  (1,0)          82122    0.411%
+  (1,1)              8    0.000%
+
+$ o/ministress acqrel 200 100000
+mode=acqrel samples=20000000
+  (0,0)        1456868    7.284%  forbidden under seq_cst
+  (0,1)        9478705   47.394%
+  (1,0)        9064420   45.322%
+  (1,1)              7    0.000%
+```
+
+First case: мало ячеек, они залетают в кэш, поэтому store-buffer особождается чаще
+
+Second case: а теперь ячеек много, поэтому выполнение потоков размазано, поэтому кэш инвалидируется тоже размазано.
